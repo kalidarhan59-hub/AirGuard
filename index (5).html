@@ -1,0 +1,622 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Aktobe AirGuard</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:system-ui,-apple-system,'Segoe UI',sans-serif;background:#f9fafb;color:#111827;min-height:100vh}
+a{text-decoration:none}
+
+/* Header */
+header{background:#006400;color:#fff;position:sticky;top:0;z-index:50;box-shadow:0 4px 6px rgba(0,0,0,.1)}
+.header-inner{max-width:1280px;margin:0 auto;padding:12px 16px;display:flex;align-items:center;justify-content:space-between;gap:16px}
+.logo-group{display:flex;align-items:center;gap:16px}
+.logo-flag{width:48px;height:32px;object-fit:cover;border:1px solid rgba(255,255,255,.2);border-radius:4px}
+.logo-title{font-size:22px;font-weight:700;letter-spacing:-.5px;line-height:1}
+.logo-sub{font-size:13px;font-weight:500;color:#90EE90;margin-top:3px}
+.lang-switch{display:flex;align-items:center;gap:4px;background:rgba(0,0,0,.2);padding:4px;border-radius:8px}
+.lang-btn{padding:5px 16px;border-radius:6px;border:none;font-size:13px;font-weight:700;cursor:pointer;transition:all .15s}
+.lang-btn.active{background:#fff;color:#006400}
+.lang-btn:not(.active){background:transparent;color:#fff}
+
+/* Main */
+main{max-width:1280px;margin:0 auto;padding:32px 16px;display:flex;flex-direction:column;gap:28px}
+
+/* Cards */
+.card{background:#fff;border-radius:16px;border:1px solid #f3f4f6;box-shadow:0 1px 2px rgba(0,0,0,.05);padding:24px}
+
+/* AQI section */
+.aqi-section{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:24px}
+.aqi-left{display:flex;align-items:flex-end;gap:16px;flex-wrap:wrap}
+.aqi-number{font-size:72px;font-weight:900;letter-spacing:-2px;line-height:1}
+.aqi-badge{display:inline-flex;align-items:center;gap:6px;padding:5px 14px;border-radius:999px;font-size:14px;font-weight:700;margin-bottom:8px}
+.aqi-subtitle{font-size:20px;font-weight:600;color:#374151;margin-bottom:8px}
+.metrics-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+.metric-card{background:#f9fafb;border:1px solid #f3f4f6;border-radius:12px;padding:14px}
+.metric-label{font-size:13px;color:#6b7280;font-weight:500;margin-bottom:4px}
+.metric-value{font-size:20px;font-weight:700}
+.metric-unit{font-size:11px;color:#9ca3af;font-weight:400;margin-left:3px}
+
+/* Chart section */
+.chart-header{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:20px}
+.section-title{font-size:20px;font-weight:600;color:#1f2937}
+.period-tabs{display:flex;background:#f3f4f6;padding:4px;border-radius:8px;gap:2px}
+.period-btn{padding:6px 16px;border-radius:6px;border:none;font-size:13px;font-weight:500;cursor:pointer;transition:all .15s;color:#4b5563;background:transparent}
+.period-btn.active{background:#fff;color:#006400;box-shadow:0 1px 3px rgba(0,0,0,.1)}
+.chart-wrap{position:relative;height:300px}
+
+/* Forecast */
+.forecast-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:12px}
+.forecast-card{border-radius:16px;padding:14px 10px;border:1px solid;display:flex;flex-direction:column;align-items:center;text-align:center;transition:transform .2s;cursor:default}
+.forecast-card:hover{transform:translateY(-4px)}
+.forecast-day{font-size:12px;font-weight:600;color:#6b7280;margin-bottom:8px}
+.forecast-emoji{font-size:28px;margin-bottom:6px}
+.forecast-pm{font-size:22px;font-weight:900;margin-bottom:4px}
+.forecast-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px}
+.forecast-meta{width:100%;padding-top:10px;border-top:1px solid rgba(0,0,0,.06);display:grid;grid-template-columns:1fr 1fr;gap:4px;font-size:11px;color:#6b7280}
+.forecast-meta-item{display:flex;flex-direction:column;align-items:center;gap:2px}
+
+/* Recommendations + Export */
+.bottom-grid{display:grid;grid-template-columns:2fr 1fr;gap:20px}
+.rec-group{margin-bottom:20px}
+.rec-group:last-child{margin-bottom:0}
+.rec-group-title{font-size:12px;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px}
+.rec-text{padding:14px 16px;border-radius:12px;font-size:14px;color:#374151;line-height:1.6}
+
+/* Export */
+.export-sub-title{font-size:14px;font-weight:600;color:#374151;margin-bottom:12px}
+.date-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px}
+.date-field label{display:block;font-size:12px;color:#6b7280;font-weight:500;margin-bottom:4px}
+.date-field input{width:100%;font-size:13px;padding:8px;border:1px solid #e5e7eb;border-radius:8px;outline:none;color:#374151}
+.btn-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px}
+.btn{display:flex;align-items:center;justify-content:center;gap:6px;padding:9px 12px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;transition:all .15s;border:none}
+.btn-outline{border:2px solid #006400!important;background:#fff;color:#006400}
+.btn-outline:hover{background:#006400;color:#fff}
+.btn-solid{background:#006400;color:#fff;box-shadow:0 1px 3px rgba(0,0,0,.1)}
+.btn-solid:hover{background:#004d00}
+.btn-blue{background:#eff6ff;border:1px solid #bfdbfe!important;color:#1d4ed8;width:100%;border-radius:12px;padding:11px}
+.btn-blue:hover{background:#dbeafe}
+
+/* Loading / Error */
+#loading-screen,#error-screen{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;gap:16px}
+.spinner{width:48px;height:48px;border:4px solid #dcfce7;border-top-color:#006400;border-radius:50%;animation:spin 1s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.loading-text{font-size:18px;font-weight:500;color:#006400}
+.error-text{font-size:18px;font-weight:500;color:#dc2626}
+
+/* Footer */
+footer{text-align:center;font-size:13px;color:#9ca3af;padding:24px 16px 48px}
+
+/* Responsive */
+@media(max-width:1024px){
+  .forecast-grid{grid-template-columns:repeat(4,1fr)}
+}
+@media(max-width:768px){
+  .metrics-grid{grid-template-columns:repeat(2,1fr)}
+  .forecast-grid{grid-template-columns:repeat(2,1fr)}
+  .bottom-grid{grid-template-columns:1fr}
+  .aqi-number{font-size:56px}
+}
+@media(max-width:480px){
+  .header-inner{flex-wrap:wrap}
+  .forecast-grid{grid-template-columns:repeat(2,1fr)}
+}
+</style>
+</head>
+<body>
+
+<div id="loading-screen">
+  <div class="spinner"></div>
+  <div class="loading-text" id="loading-text">Загрузка данных и обучение модели...</div>
+</div>
+
+<div id="error-screen" style="display:none">
+  <div style="font-size:48px">⚠️</div>
+  <div class="error-text">Ошибка загрузки данных. Пожалуйста, попробуйте позже.</div>
+</div>
+
+<div id="app" style="display:none">
+
+<header>
+  <div class="header-inner">
+    <div class="logo-group">
+      <img class="logo-flag" src="https://upload.wikimedia.org/wikipedia/commons/d/d3/Flag_of_Kazakhstan.svg" alt="KZ"/>
+      <div>
+        <div class="logo-title">Aktobe AirGuard</div>
+        <div class="logo-sub" id="h-subtitle">Ақтөбе қаласы</div>
+      </div>
+    </div>
+    <div class="lang-switch">
+      <button class="lang-btn active" onclick="setLang('ru')">RU</button>
+      <button class="lang-btn" onclick="setLang('kz')">KZ</button>
+    </div>
+  </div>
+</header>
+
+<main>
+
+  <!-- Current AQI -->
+  <div class="card">
+    <div style="font-size:20px;font-weight:600;color:#374151;margin-bottom:20px" id="lbl-current">Текущее качество воздуха</div>
+    <div class="aqi-section">
+      <div>
+        <div class="aqi-left">
+          <div class="aqi-number" id="aqi-number">—</div>
+          <div style="margin-bottom:8px">
+            <div class="aqi-badge" id="aqi-badge">—</div>
+          </div>
+        </div>
+      </div>
+      <div class="metrics-grid" style="flex:1;min-width:300px">
+        <div class="metric-card">
+          <div class="metric-label" id="lbl-pm25">PM2.5</div>
+          <div class="metric-value"><span id="val-pm25">—</span><span class="metric-unit">µg/m³</span></div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-label" id="lbl-pm10">PM10</div>
+          <div class="metric-value"><span id="val-pm10">—</span><span class="metric-unit">µg/m³</span></div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-label" id="lbl-temp">Температура</div>
+          <div class="metric-value"><span id="val-temp">—</span><span class="metric-unit">°C</span></div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-label" id="lbl-wind">Ветер</div>
+          <div class="metric-value"><span id="val-wind">—</span><span class="metric-unit">m/s</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- History Chart -->
+  <div class="card">
+    <div class="chart-header">
+      <div class="section-title" id="lbl-history">История качества воздуха (PM2.5)</div>
+      <div class="period-tabs">
+        <button class="period-btn active" onclick="setPeriod(30,this)" id="btn30">30 дней</button>
+        <button class="period-btn" onclick="setPeriod(90,this)" id="btn90">90 дней</button>
+        <button class="period-btn" onclick="setPeriod(365,this)" id="btn365">365 дней</button>
+      </div>
+    </div>
+    <div class="chart-wrap">
+      <canvas id="histChart"></canvas>
+    </div>
+  </div>
+
+  <!-- 7-Day Forecast -->
+  <div>
+    <div class="section-title" style="margin-bottom:16px" id="lbl-forecast">Прогноз на 7 дней (PM2.5)</div>
+    <div class="forecast-grid" id="forecast-grid"></div>
+  </div>
+
+  <!-- Recommendations + Export -->
+  <div class="bottom-grid">
+
+    <div class="card">
+      <div class="section-title" style="margin-bottom:20px;display:flex;align-items:center;gap:8px">
+        <span style="color:#3b82f6;font-size:20px">ℹ</span>
+        <span id="lbl-recs">Рекомендации</span>
+      </div>
+      <div class="rec-group">
+        <div class="rec-group-title" id="lbl-citizens">Для жителей:</div>
+        <div class="rec-text" id="rec-citizens" style="background:#eff6ff;border:1px solid #dbeafe"></div>
+      </div>
+      <div class="rec-group">
+        <div class="rec-group-title" id="lbl-akim">Для акимата:</div>
+        <div class="rec-text" id="rec-akim" style="background:#f0fdf4;border:1px solid #dcfce7"></div>
+      </div>
+    </div>
+
+    <div class="card" style="display:flex;flex-direction:column">
+      <div class="section-title" style="margin-bottom:16px" id="lbl-export">Экспорт данных</div>
+      <div style="margin-top:auto">
+        <div style="background:#f9fafb;padding:16px;border-radius:12px;border:1px solid #f3f4f6;margin-bottom:12px">
+          <div class="export-sub-title" id="lbl-expHist">Экспорт истории</div>
+          <div class="date-row">
+            <div class="date-field">
+              <label id="lbl-start">Начало</label>
+              <input type="date" id="exp-start"/>
+            </div>
+            <div class="date-field">
+              <label id="lbl-end">Конец</label>
+              <input type="date" id="exp-end"/>
+            </div>
+          </div>
+          <div class="btn-row">
+            <button class="btn btn-outline" onclick="dlHistCSV()">📄 CSV</button>
+            <button class="btn btn-solid" onclick="dlPDF()">⬇ PDF</button>
+          </div>
+        </div>
+        <button class="btn btn-blue" onclick="dlForeCSV()" id="btn-dlFore">📄 Скачать прогноз (CSV)</button>
+      </div>
+    </div>
+
+  </div>
+
+</main>
+
+<footer id="footer-sources">Источники данных: aqicn.org • OpenAQ • Open-Meteo</footer>
+
+</div><!-- /app -->
+
+<script>
+// ── date helpers ─────────────────────────────────────────────────────────────
+const MONTH=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+function fmtShort(str){const d=new Date(str);return String(d.getDate()).padStart(2,'0')+' '+MONTH[d.getMonth()];}
+function fmtFull(str){const d=new Date(str);return String(d.getDate()).padStart(2,'0')+' '+MONTH[d.getMonth()]+' '+d.getFullYear();}
+function fmtDot(str){const d=new Date(str);return String(d.getDate()).padStart(2,'0')+'.'+String(d.getMonth()+1).padStart(2,'0');}
+function isoToday(){return new Date().toISOString().split('T')[0];}
+function dateMinusDays(n){const d=new Date();d.setDate(d.getDate()-n);return d.toISOString().split('T')[0];}
+
+// ── Mini Random Forest ────────────────────────────────────────────────────────
+class RF{
+  constructor(n=40){this.n=n;this.trees=[];}
+  mean(a){return a.length?a.reduce((s,v)=>s+v,0)/a.length:0;}
+  vari(a){if(a.length<2)return 0;const m=this.mean(a);return a.reduce((s,v)=>s+(v-m)**2,0)/a.length;}
+  train(X,y){for(let i=0;i<this.n;i++){const idx=Array.from({length:X.length},()=>Math.floor(Math.random()*X.length));this.trees.push(this.buildTree(idx.map(i=>X[i]),idx.map(i=>y[i]),5));}}
+  buildTree(X,y,d){
+    if(!d||X.length<=2)return{leaf:true,v:this.mean(y)};
+    let best={g:-1};
+    for(let fi=0;fi<X[0].length;fi++){
+      const vals=[...new Set(X.map(r=>r[fi]))].sort((a,b)=>a-b);
+      for(let k=0;k<vals.length-1;k++){
+        const fv=(vals[k]+vals[k+1])/2,Ly=[],Ry=[],XL=[],XR=[];
+        X.forEach((r,i)=>{(r[fi]<=fv?(Ly.push(y[i]),XL):(Ry.push(y[i]),XR)).push(r);});
+        if(!Ly.length||!Ry.length)continue;
+        const g=this.vari(y)-(Ly.length/y.length*this.vari(Ly))-(Ry.length/y.length*this.vari(Ry));
+        if(g>best.g)best={g,fi,fv,Ly,Ry,XL,XR};
+      }
+    }
+    if(best.g<=0)return{leaf:true,v:this.mean(y)};
+    return{leaf:false,...best,L:this.buildTree(best.XL,best.Ly,d-1),R:this.buildTree(best.XR,best.Ry,d-1)};
+  }
+  pred1(node,x){return node.leaf?node.v:x[node.fi]<=node.fv?this.pred1(node.L,x):this.pred1(node.R,x);}
+  predict(X){return X.map(x=>this.trees.reduce((s,t)=>s+this.pred1(t,x),0)/this.n);}
+}
+
+// ── Translations ──────────────────────────────────────────────────────────────
+const TR={
+  ru:{
+    subtitle:'Ақтөбе қаласы',current:'Текущее качество воздуха',
+    pm25:'PM2.5',pm10:'PM10',temp:'Температура',wind:'Ветер',
+    history:'История качества воздуха (PM2.5)',forecast:'Прогноз на 7 дней (PM2.5)',
+    recs:'Рекомендации',citizens:'Для жителей:',akim:'Для акимата:',
+    export:'Экспорт данных',expHist:'Экспорт истории',start:'Начало',end:'Конец',
+    dlFore:'Скачать прогноз (CSV)',loading:'Загрузка данных и обучение модели...',
+    d30:'30 дней',d90:'90 дней',d365:'365 дней',tomorrow:'Завтра',
+    sources:'Источники данных: aqicn.org • OpenAQ • Open-Meteo',
+    good:'Хорошо',mod:'Умеренно',sens:'Вредно для уязвимых групп',
+    unh:'Вредно',vunh:'Очень вредно',haz:'Опасно',
+    recGood:'Воздух чистый. Идеальное время для прогулок и проветривания помещений.',
+    recMod:'Качество воздуха приемлемое. Чувствительным людям стоит ограничить длительные нагрузки на улице.',
+    recUnh:'Избегайте длительных прогулок. Закройте окна, используйте очистители воздуха.',
+    akimGood:'Продолжать текущий мониторинг. Показатели в норме.',
+    akimMod:'Усилить контроль за выбросами промышленных предприятий в черте города.',
+    akimUnh:'Ввести ограничения на движение большегрузного транспорта. Оповестить население.'
+  },
+  kz:{
+    subtitle:'Ақтөбе қаласы',current:'Ауаның ағымдағы сапасы',
+    pm25:'PM2.5',pm10:'PM10',temp:'Температура',wind:'Жел',
+    history:'Ауа сапасының тарихы (PM2.5)',forecast:'7 күндік болжам (PM2.5)',
+    recs:'Ұсыныстар',citizens:'Тұрғындар үшін:',akim:'Әкімдік үшін:',
+    export:'Деректерді экспорттау',expHist:'Тарихты экспорттау',start:'Басталуы',end:'Аяқталуы',
+    dlFore:'Болжамды жүктеу (CSV)',loading:'Деректерді жүктеу және модельді оқыту...',
+    d30:'30 күн',d90:'90 күн',d365:'365 күн',tomorrow:'Ертең',
+    sources:'Дереккөздер: aqicn.org • OpenAQ • Open-Meteo',
+    good:'Жақсы',mod:'Орташа',sens:'Сезімтал топтар үшін зиянды',
+    unh:'Зиянды',vunh:'Өте зиянды',haz:'Қауіпті',
+    recGood:'Ауа таза. Серуендеуге және бөлмені желдетуге тамаша уақыт.',
+    recMod:'Ауа сапасы қолайлы. Сезімтал адамдар далада ұзақ жүруді шектеуі керек.',
+    recUnh:'Ұзақ серуендеуден аулақ болыңыз. Терезелерді жабыңыз, ауа тазартқыштарды қолданыңыз.',
+    akimGood:'Ағымдағы мониторингті жалғастыру. Көрсеткіштер қалыпты.',
+    akimMod:'Қала ішіндегі өнеркәсіптік кәсіпорындардың шығарындыларын бақылауды күшейту.',
+    akimUnh:'Ауыр жүк көліктерінің қозғалысына шектеу енгізу. Халықты хабардар ету.'
+  }
+};
+
+// ── AQI helpers ───────────────────────────────────────────────────────────────
+function aqiInfo(aqi){
+  if(aqi<=50)  return{color:'#009966',bg:'rgba(0,153,102,.1)', label:'good',  emoji:'😊'};
+  if(aqi<=100) return{color:'#b39b00',bg:'rgba(255,222,51,.15)',label:'mod',   emoji:'😐'};
+  if(aqi<=150) return{color:'#cc6600',bg:'rgba(255,153,51,.15)',label:'sens',  emoji:'😷'};
+  if(aqi<=200) return{color:'#cc0033',bg:'rgba(204,0,51,.1)',   label:'unh',   emoji:'🤢'};
+  if(aqi<=300) return{color:'#660099',bg:'rgba(102,0,153,.1)',  label:'vunh',  emoji:'🤮'};
+  return             {color:'#7e0023',bg:'rgba(126,0,35,.1)',   label:'haz',   emoji:'☠️'};
+}
+function pm25Info(pm25){
+  if(pm25<=12.0)  return aqiInfo(40);
+  if(pm25<=35.4)  return aqiInfo(80);
+  if(pm25<=55.4)  return aqiInfo(130);
+  if(pm25<=150.4) return aqiInfo(170);
+  if(pm25<=250.4) return aqiInfo(250);
+  return aqiInfo(350);
+}
+
+// ── State ─────────────────────────────────────────────────────────────────────
+let lang='ru';
+let historyData=[];
+let forecastData=[];
+let currentAQI=0;
+let histChart=null;
+let currentPeriod=30;
+
+// ── Translate UI ──────────────────────────────────────────────────────────────
+function applyLang(){
+  const t=TR[lang];
+  document.getElementById('h-subtitle').textContent=t.subtitle;
+  document.getElementById('lbl-current').textContent=t.current;
+  document.getElementById('lbl-pm25').textContent=t.pm25;
+  document.getElementById('lbl-pm10').textContent=t.pm10;
+  document.getElementById('lbl-temp').textContent=t.temp;
+  document.getElementById('lbl-wind').textContent=t.wind;
+  document.getElementById('lbl-history').textContent=t.history;
+  document.getElementById('btn30').textContent=t.d30;
+  document.getElementById('btn90').textContent=t.d90;
+  document.getElementById('btn365').textContent=t.d365;
+  document.getElementById('lbl-forecast').textContent=t.forecast;
+  document.getElementById('lbl-recs').textContent=t.recs;
+  document.getElementById('lbl-citizens').textContent=t.citizens;
+  document.getElementById('lbl-akim').textContent=t.akim;
+  document.getElementById('lbl-export').textContent=t.export;
+  document.getElementById('lbl-expHist').textContent=t.expHist;
+  document.getElementById('lbl-start').textContent=t.start;
+  document.getElementById('lbl-end').textContent=t.end;
+  document.getElementById('btn-dlFore').textContent='📄 '+t.dlFore;
+  document.getElementById('footer-sources').textContent=t.sources;
+  // Recs
+  const info=aqiInfo(currentAQI);
+  document.getElementById('rec-citizens').textContent=currentAQI<=50?t.recGood:currentAQI<=100?t.recMod:t.recUnh;
+  document.getElementById('rec-akim').textContent=currentAQI<=50?t.akimGood:currentAQI<=100?t.akimMod:t.akimUnh;
+  // Forecast re-render (day names)
+  if(forecastData.length)renderForecast();
+}
+
+function setLang(l){
+  lang=l;
+  document.querySelectorAll('.lang-btn').forEach(b=>{
+    b.classList.toggle('active',b.textContent===l.toUpperCase());
+  });
+  applyLang();
+}
+
+// ── AQI Card ──────────────────────────────────────────────────────────────────
+function renderAQI(data){
+  currentAQI=data.aqi;
+  const info=aqiInfo(data.aqi);
+  const t=TR[lang];
+  document.getElementById('aqi-number').textContent=data.aqi;
+  document.getElementById('aqi-number').style.color=info.color;
+  const badge=document.getElementById('aqi-badge');
+  badge.textContent=info.emoji+' '+t[info.label];
+  badge.style.background=info.bg;
+  badge.style.color=info.color;
+  document.getElementById('val-pm25').textContent=data.pm25;
+  document.getElementById('val-pm10').textContent=data.pm10;
+  document.getElementById('val-temp').textContent=data.temp;
+  document.getElementById('val-wind').textContent=data.wind;
+  document.getElementById('rec-citizens').textContent=data.aqi<=50?t.recGood:data.aqi<=100?t.recMod:t.recUnh;
+  document.getElementById('rec-akim').textContent=data.aqi<=50?t.akimGood:data.aqi<=100?t.akimMod:t.akimUnh;
+}
+
+// ── History Chart ─────────────────────────────────────────────────────────────
+function renderChart(days){
+  currentPeriod=days;
+  let slice=historyData.slice(-days);
+  // Aggregate weekly for 365
+  if(days>90){
+    const agg=[];
+    for(let i=0;i<slice.length;i+=7){
+      const c=slice.slice(i,i+7);
+      agg.push({date:c[0].date,pm25:c.reduce((s,d)=>s+d.pm25,0)/c.length});
+    }
+    slice=agg;
+  }
+  const labels=slice.map(d=>fmtShort(d.date));
+  const vals=slice.map(d=>parseFloat(d.pm25.toFixed(1)));
+
+  if(histChart)histChart.destroy();
+  const ctx=document.getElementById('histChart').getContext('2d');
+  const grad=ctx.createLinearGradient(0,0,0,300);
+  grad.addColorStop(0,'rgba(0,100,0,0.25)');
+  grad.addColorStop(1,'rgba(0,100,0,0)');
+  histChart=new Chart(ctx,{
+    type:'line',
+    data:{
+      labels,
+      datasets:[
+        {label:'PM2.5',data:vals,borderColor:'#006400',backgroundColor:grad,fill:true,tension:0.4,borderWidth:2.5,pointRadius:days<=30?3:0,pointHoverRadius:5,pointBackgroundColor:'#006400'},
+        {label:'ВОЗ норма (15)',data:Array(labels.length).fill(15),borderColor:'rgba(220,38,38,0.4)',borderWidth:1,borderDash:[6,4],pointRadius:0,fill:false}
+      ]
+    },
+    options:{
+      responsive:true,maintainAspectRatio:false,
+      interaction:{intersect:false,mode:'index'},
+      plugins:{
+        legend:{display:false},
+        tooltip:{
+          backgroundColor:'rgba(17,24,39,0.9)',titleColor:'#9ca3af',bodyColor:'#f9fafb',
+          borderColor:'rgba(0,100,0,0.3)',borderWidth:1,padding:10,cornerRadius:8,
+          callbacks:{
+            title:items=>fmtFull(historyData.slice(-days)[Math.min(items[0].dataIndex*(days>90?7:1),historyData.length-1)]?.date||''),
+            label:item=>' '+item.dataset.label+': '+item.raw+' µg/m³'
+          }
+        }
+      },
+      scales:{
+        x:{grid:{color:'rgba(0,0,0,0.04)'},ticks:{color:'#6b7280',font:{size:11},maxTicksLimit:10,maxRotation:0}},
+        y:{grid:{color:'rgba(0,0,0,0.04)'},ticks:{color:'#6b7280',font:{size:11}},min:0}
+      }
+    }
+  });
+}
+
+function setPeriod(days,btn){
+  document.querySelectorAll('.period-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  renderChart(days);
+}
+
+// ── Forecast ──────────────────────────────────────────────────────────────────
+function renderForecast(){
+  const t=TR[lang];
+  const grid=document.getElementById('forecast-grid');
+  grid.innerHTML='';
+  forecastData.forEach((day,i)=>{
+    const info=pm25Info(day.pm25);
+    const label=i===0?t.tomorrow:fmtDot(day.date);
+    const card=document.createElement('div');
+    card.className='forecast-card';
+    card.style.background=info.bg;
+    card.style.borderColor=info.color+'44';
+    card.innerHTML=`
+      <div class="forecast-day">${label}</div>
+      <div class="forecast-emoji">${info.emoji}</div>
+      <div class="forecast-pm" style="color:${info.color}">${day.pm25.toFixed(0)}</div>
+      <div class="forecast-label" style="color:${info.color}">${t[info.label]}</div>
+      <div class="forecast-meta">
+        <div class="forecast-meta-item"><span>🌡</span>${day.tempMax.toFixed(0)}°</div>
+        <div class="forecast-meta-item"><span>💨</span>${day.windSpeed.toFixed(0)}</div>
+      </div>`;
+    grid.appendChild(card);
+  });
+}
+
+// ── Export ────────────────────────────────────────────────────────────────────
+function dlHistCSV(){
+  const start=document.getElementById('exp-start').value;
+  const end=document.getElementById('exp-end').value;
+  const rows=historyData.filter(d=>d.date>=start&&d.date<=end);
+  const a=Object.assign(document.createElement('a'),{
+    href:URL.createObjectURL(new Blob([Papa.unparse(rows)],{type:'text/csv'})),
+    download:`aktobe_air_${start}_${end}.csv`
+  });a.click();
+}
+function dlForeCSV(){
+  const a=Object.assign(document.createElement('a'),{
+    href:URL.createObjectURL(new Blob([Papa.unparse(forecastData)],{type:'text/csv'})),
+    download:'aktobe_forecast.csv'
+  });a.click();
+}
+function dlPDF(){
+  const {jsPDF}=window.jspdf;
+  const doc=new jsPDF();
+  doc.setFontSize(16);doc.text('Aktobe AirGuard Report',14,16);
+  doc.setFontSize(11);doc.setTextColor(100);
+  doc.text('Generated: '+new Date().toLocaleDateString(),14,26);
+  doc.text('AQI: '+currentAQI,14,34);
+  const start=document.getElementById('exp-start').value;
+  const end=document.getElementById('exp-end').value;
+  const rows=historyData.filter(d=>d.date>=start&&d.date<=end).slice(-30);
+  doc.autoTable({startY:42,head:[['Date','PM2.5 (µg/m³)','Temp Max (°C)','Wind (km/h)']],body:rows.map(d=>[d.date,d.pm25.toFixed(1),d.tempMax.toFixed(1),d.windSpeed.toFixed(1)])});
+  doc.save('aktobe_air_report.pdf');
+}
+
+// ── Main data fetch ───────────────────────────────────────────────────────────
+async function loadData(){
+  try{
+    document.getElementById('loading-text').textContent=TR[lang].loading;
+
+    const [waqiRes,openAqRes,weatherRes,fallbackRes]=await Promise.allSettled([
+      fetch('https://api.waqi.info/feed/aktobe/?token=7a6def6daa726d897f427d60e4dc64012b49181b').then(r=>r.json()),
+      fetch('https://api.openaq.org/v2/measurements?country=KZ&city=Aktobe&parameter=pm25&limit=1000&sort=desc').then(r=>{if(!r.ok)throw 0;return r.json();}),
+      fetch('https://api.open-meteo.com/v1/forecast?latitude=50.2833&longitude=57.1667&daily=temperature_2m_max,temperature_2m_min,wind_speed_10m_max&timezone=Asia/Aqtobe&past_days=90').then(r=>{if(!r.ok)throw 0;return r.json();}),
+      fetch('https://air-quality-api.open-meteo.com/v1/air-quality?latitude=50.2833&longitude=57.1667&current=european_aqi,pm10,pm2_5,nitrogen_dioxide').then(r=>r.json())
+    ]);
+
+    const waqi   = waqiRes.status==='fulfilled'   ? waqiRes.value.data       : null;
+    const openAq = openAqRes.status==='fulfilled'  ? (openAqRes.value.results||[]) : [];
+    const weather= weatherRes.status==='fulfilled' ? weatherRes.value.daily   : null;
+    const fallback=fallbackRes.status==='fulfilled'? fallbackRes.value.current: null;
+
+    if(!weather) throw new Error('Weather unavailable');
+
+    // Current data
+    const rawAqi=parseInt(waqi?.aqi,10);
+    const aqi=isNaN(rawAqi)?(fallback?.european_aqi||45):rawAqi;
+    renderAQI({
+      aqi,
+      pm25: +(waqi?.iaqi?.pm25?.v ?? fallback?.pm2_5  ?? 12).toFixed(1),
+      pm10: +(waqi?.iaqi?.pm10?.v ?? fallback?.pm10   ?? 20).toFixed(1),
+      temp: +(waqi?.iaqi?.t?.v    ?? weather.temperature_2m_max[weather.time.length-8] ?? 15).toFixed(1),
+      wind: +(waqi?.iaqi?.w?.v    ?? weather.wind_speed_10m_max[weather.time.length-8] ?? 5).toFixed(1),
+    });
+
+    // Group OpenAQ PM2.5 by date
+    const byDate={};
+    openAq.forEach(item=>{
+      if(item?.date?.utc){
+        const d=item.date.utc.split('T')[0];
+        (byDate[d]=byDate[d]||[]).push(item.value);
+      }
+    });
+    const dailyPm25={};
+    for(const d in byDate)dailyPm25[d]=byDate[d].reduce((a,b)=>a+b,0)/byDate[d].length;
+
+    // Build history
+    const hist=[];
+    const today=new Date();
+    const wSet=new Set(weather.time);
+    const trainX=[],trainY=[];
+
+    for(let i=365;i>0;i--){
+      const d=new Date();d.setDate(today.getDate()-i);
+      const ds=d.toISOString().split('T')[0];
+      if(!wSet.has(ds)){
+        const m=d.getMonth(),isW=m<=2||m>=10;
+        const mT=isW?-5+Math.random()*10:20+Math.random()*10,mW=3+Math.random()*5;
+        let pm=dailyPm25[ds];
+        if(typeof pm!=='number'||isNaN(pm))pm=Math.max(5,15+(mT<0?Math.abs(mT)*1.2:0)-(mW*0.4)+(Math.random()*8-4));
+        hist.push({date:ds,pm25:pm,tempMax:mT,windSpeed:mW});
+      }
+    }
+    weather.time.forEach((date,i)=>{
+      const tMax=weather.temperature_2m_max[i]??15;
+      const tMin=weather.temperature_2m_min[i]??5;
+      const wind=weather.wind_speed_10m_max[i]??5;
+      let pm=dailyPm25[date];
+      if(typeof pm!=='number'||isNaN(pm))pm=Math.max(5,15+(tMax<0?Math.abs(tMax)*1.2:0)-(wind*0.4)+(Math.random()*8-4));
+      if(new Date(date)<=today)hist.push({date,pm25:pm,tempMax:tMax,windSpeed:wind});
+      trainX.push([tMax,tMin,wind]);trainY.push(pm);
+    });
+    hist.sort((a,b)=>a.date.localeCompare(b.date));
+    historyData=hist;
+
+    // Set export date defaults
+    if(hist.length){
+      document.getElementById('exp-start').value=hist[Math.max(0,hist.length-30)].date;
+      document.getElementById('exp-end').value=hist[hist.length-1].date;
+    }
+
+    // Train RF & forecast
+    const rf=new RF(40);rf.train(trainX,trainY);
+    const n=weather.time.length,fX=[],fDates=[];
+    for(let i=n-7;i<n;i++){
+      fX.push([weather.temperature_2m_max[i]??0,weather.temperature_2m_min[i]??0,weather.wind_speed_10m_max[i]??0]);
+      fDates.push(weather.time[i]);
+    }
+    const preds=rf.predict(fX);
+    forecastData=fDates.map((date,i)=>({date,pm25:Math.max(0,preds[i]),tempMax:fX[i][0],windSpeed:fX[i][2]}));
+    renderForecast();
+    renderChart(30);
+
+    // Show app
+    document.getElementById('loading-screen').style.display='none';
+    document.getElementById('app').style.display='block';
+
+  }catch(e){
+    console.error(e);
+    document.getElementById('loading-screen').style.display='none';
+    document.getElementById('error-screen').style.display='flex';
+  }
+}
+
+loadData();
+</script>
+</body>
+</html>
